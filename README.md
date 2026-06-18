@@ -1,5 +1,4 @@
-# 魔法公主 修改器 — MizuofCheatMod
-
+# 梦幻魔法公主 修改器 — Magical Princess Cheat Mod
 Magical Princess MelonLoader Mod — 游戏内修改面板，按 F1 打开。
 
 ![menu screenshot](Image/1.png)

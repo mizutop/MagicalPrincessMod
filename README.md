@@ -2,6 +2,9 @@
 
 Magical Princess MelonLoader Mod — 游戏内修改面板，按 F1 打开。
 
+![menu screenshot](Image/1.png)
+![menu screenshot](Image/2.png)
+
 ## 安装方法
 
 ### 1. 安装 MelonLoader

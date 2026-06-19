@@ -43,14 +43,14 @@ namespace MizuofCheatMod.UI
 					Dyn st = GameReflect.Status;
 					if (st)
 					{
-						ModMenu.InputRow("金钱", st, "money", ref _b1);
-						ModMenu.InputRow("压力", st, "stress", ref _b2);
-						ModMenu.InputRow("名声", st, "reputation", ref _bufRep);
-						ModMenu.InputRow("善恶(善行)", st, "goodAction", ref _bufGood);
-						ModMenu.InputRow("善恶(恶行)", st, "badAction", ref _bufBad);
-						ModMenu.InputRow("善恶平衡", st, "gbBalance", ref _bufBal);
+						ModMenu.SmartInputRow("金钱", st, "money", ref _b1, v => GameMethodResolver.SetMoney(v));
+						ModMenu.SmartInputRow("压力", st, "stress", ref _b2, v => GameMethodResolver.SetStress(v));
+						ModMenu.SmartInputRow("名声", st, "reputation", ref _bufRep, v => GameMethodResolver.SetReputation(v));
+						ModMenu.SmartInputRow("善恶(善行)", st, "goodAction", ref _bufGood, v => GameMethodResolver.SetGoodAction(v));
+						ModMenu.SmartInputRow("善恶(恶行)", st, "badAction", ref _bufBad, v => GameMethodResolver.SetBadAction(v));
+						ModMenu.SmartInputRow("善恶平衡", st, "gbBalance", ref _bufBal, v => GameMethodResolver.SetBalance(v));
 						ModMenu.Gap(2f);
-						ModMenu.InputRow("行动力上限", st, "activePowerMax", ref _bufAPMax);
+						ModMenu.SmartInputRow("行动力上限", st, "activePowerMax", ref _bufAPMax, v => GameMethodResolver.SetActivePowerMax(v));
 						int ap = st.I("activePower");
 						int max = st.I("activePowerMax");
 						ModMenu.Label("行动力  " + ap + " / " + max);
@@ -59,15 +59,15 @@ namespace MizuofCheatMod.UI
 						_b3 = GUILayout.TextField(_b3, GUIStyleBuilder.TextField, GUILayout.Width(60), GUILayout.Height(18));
 						if (ModMenu.RoseBtn("补满", 50))
 						{
-							st.SI("activePower", st.I("activePowerMax"));
+							GameMethodResolver.FillActivePower();
 						}
 						GUILayout.EndHorizontal();
 						ModMenu.Gap(2f);
-						ModMenu.InputRow("东亚硬币", st, "blackCoin", ref _bufBCoin);
+						ModMenu.SmartInputRow("东亚硬币", st, "blackCoin", ref _bufBCoin, v => GameMethodResolver.SetBlackCoin(v));
 					}
 					else
 					{
-						ModMenu.Label("等待游戏加载... 请进入游戏场景后按 F1");
+						ModMenu.Label("等待游戏加载...");
 					}
 				});
 				ModMenu.Card(delegate
@@ -88,14 +88,14 @@ namespace MizuofCheatMod.UI
 						ModMenu.Gap(2f);
 						if (ModMenu.GoldBtn("一键999 (全属性)", 160))
 						{
-							s.SI("phyKinryoku", 999); s.SI("phySeimei", 999);
-							s.SI("phyKonjyo", 999); s.SI("phyBinsho", 999);
-							s.SI("intBungaku", 999); s.SI("intSanjyutsu", 999);
-							s.SI("intMajyutsu", 999); s.SI("intShinkou", 999);
-							s.SI("chaBibou", 999); s.SI("chaShakou", 999);
-							s.SI("chaReigi", 999); s.SI("chaDoutoku", 999);
-							s.SI("senSouzou", 999); s.SI("senSousaku", 999);
-							s.SI("senOnkan", 999); s.SI("senBikan", 999);
+							GameMethodResolver.SetAttribute("phyKinryoku", 999); GameMethodResolver.SetAttribute("phySeimei", 999);
+							GameMethodResolver.SetAttribute("phyKonjyo", 999); GameMethodResolver.SetAttribute("phyBinsho", 999);
+							GameMethodResolver.SetAttribute("intBungaku", 999); GameMethodResolver.SetAttribute("intSanjyutsu", 999);
+							GameMethodResolver.SetAttribute("intMajyutsu", 999); GameMethodResolver.SetAttribute("intShinkou", 999);
+							GameMethodResolver.SetAttribute("chaBibou", 999); GameMethodResolver.SetAttribute("chaShakou", 999);
+							GameMethodResolver.SetAttribute("chaReigi", 999); GameMethodResolver.SetAttribute("chaDoutoku", 999);
+							GameMethodResolver.SetAttribute("senSouzou", 999); GameMethodResolver.SetAttribute("senSousaku", 999);
+							GameMethodResolver.SetAttribute("senOnkan", 999); GameMethodResolver.SetAttribute("senBikan", 999);
 							ModMenu.Label("已执行");
 						}
 					}
@@ -109,16 +109,16 @@ namespace MizuofCheatMod.UI
 					Dyn st = GameReflect.Status;
 					if (st)
 					{
-						ModMenu.InputRow("体力Lv", st, "levelPhysical", ref _bufLvPhy);
-						ModMenu.InputRow("知性Lv", st, "levelIntelligence", ref _bufLvInt);
-						ModMenu.InputRow("魅力Lv", st, "levelCharm", ref _bufLvCha);
-						ModMenu.InputRow("感性Lv", st, "levelSense", ref _bufLvSen);
-						ModMenu.InputRow("战斗Lv", st, "levelBattle", ref _bufLvBat);
-						ModMenu.InputRow("魔法Lv", st, "levelMagic", ref _bufLvMag);
+						ModMenu.SmartInputRow("体力Lv", st, "levelPhysical", ref _bufLvPhy, v => GameMethodResolver.SetLevel("levelPhysical", v));
+						ModMenu.SmartInputRow("知性Lv", st, "levelIntelligence", ref _bufLvInt, v => GameMethodResolver.SetLevel("levelIntelligence", v));
+						ModMenu.SmartInputRow("魅力Lv", st, "levelCharm", ref _bufLvCha, v => GameMethodResolver.SetLevel("levelCharm", v));
+						ModMenu.SmartInputRow("感性Lv", st, "levelSense", ref _bufLvSen, v => GameMethodResolver.SetLevel("levelSense", v));
+						ModMenu.SmartInputRow("战斗Lv", st, "levelBattle", ref _bufLvBat, v => GameMethodResolver.SetLevel("levelBattle", v));
+						ModMenu.SmartInputRow("魔法Lv", st, "levelMagic", ref _bufLvMag, v => GameMethodResolver.SetLevel("levelMagic", v));
 						ModMenu.Gap(2f);
-						ModMenu.InputRow("工资率", st, "salaryRate", ref _bufSal);
-						ModMenu.InputRow("购买率", st, "buyPriceRate", ref _bufBuy);
-						ModMenu.InputRow("战斗金率", st, "battleMoneyRate", ref _bufBatM);
+						ModMenu.SmartInputRow("工资率", st, "salaryRate", ref _bufSal, v => GameMethodResolver.SetRate("salaryRate", v));
+						ModMenu.SmartInputRow("购买率", st, "buyPriceRate", ref _bufBuy, v => GameMethodResolver.SetRate("buyPriceRate", v));
+						ModMenu.SmartInputRow("战斗金率", st, "battleMoneyRate", ref _bufBatM, v => GameMethodResolver.SetRate("battleMoneyRate", v));
 					}
 				});
 				ModMenu.Card(delegate
@@ -128,8 +128,8 @@ namespace MizuofCheatMod.UI
 					Dyn st = GameReflect.Status;
 					if (st)
 					{
-						ModMenu.InputRow("好感度", st, "fatherFavarite", ref _bufFav);
-						ModMenu.InputRow("好感等级", st, "fatherFavLevel", ref _bufFavLv);
+						ModMenu.SmartInputRow("好感度", st, "fatherFavarite", ref _bufFav, v => GameMethodResolver.SetFatherFav(v));
+						ModMenu.SmartInputRow("好感等级", st, "fatherFavLevel", ref _bufFavLv, v => GameMethodResolver.SetFatherFavLevel(v));
 					}
 				});
 				ModMenu.Card(delegate
@@ -147,7 +147,7 @@ namespace MizuofCheatMod.UI
 		}
 
 		/// <summary>
-		/// 两列并排的可编辑输入行（显示当前值 + 输入框 + Set按钮）
+		/// 两列并排的可编辑输入行（使用 Resolver 调用游戏方法）
 		/// </summary>
 		private static void TwoColInput(string label1, string field1, Dyn stat, ref string buf1,
 			string label2, string field2, Dyn stat2, ref string buf2)
@@ -161,7 +161,7 @@ namespace MizuofCheatMod.UI
 				GUILayout.Width(44), GUILayout.Height(18));
 			if (ModMenu.RoseBtn("S", 22) && int.TryParse(buf1, out int p1))
 			{
-				stat.SI(field1, p1);
+				GameMethodResolver.SetAttribute(field1, p1);
 			}
 
 			GUILayout.Space(6);
@@ -173,7 +173,7 @@ namespace MizuofCheatMod.UI
 				GUILayout.Width(44), GUILayout.Height(18));
 			if (ModMenu.RoseBtn("S", 22) && int.TryParse(buf2, out int p2))
 			{
-				stat2.SI(field2, p2);
+				GameMethodResolver.SetAttribute(field2, p2);
 			}
 
 			GUILayout.EndHorizontal();

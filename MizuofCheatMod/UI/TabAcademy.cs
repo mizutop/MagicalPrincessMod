@@ -30,13 +30,7 @@ namespace MizuofCheatMod.UI
 							{
 								for (int i = 0; i < curricula.Count; i++)
 								{
-									Dyn cd = curricula[i].O("data");
-									if (cd)
-									{
-										cd.SI("isComplete", 1);
-										cd.SI("isActive", 1);
-										cd.SI("restHP", 999);
-									}
+									GameMethodResolver.CompleteCurriculum(curricula[i]);
 								}
 								ModMenu.Label("已完成" + curricula.Count + "门课程");
 							}
@@ -87,10 +81,10 @@ namespace MizuofCheatMod.UI
 						ModMenu.Gap(4f);
 						if (ModMenu.RoseBtn("全部技能解锁", 130))
 						{
-							st.SI("isUnlockSkillPhysical", 1);
-							st.SI("isUnlockSkillIntelligence", 1);
-							st.SI("isUnlockSkillCharm", 1);
-							st.SI("isUnlockSkillSense", 1);
+							GameMethodResolver.UnlockSkill("isUnlockSkillPhysical");
+							GameMethodResolver.UnlockSkill("isUnlockSkillIntelligence");
+							GameMethodResolver.UnlockSkill("isUnlockSkillCharm");
+							GameMethodResolver.UnlockSkill("isUnlockSkillSense");
 							// 同时点亮所有技能
 							Dyn skills = GameReflect.MyData.O("skillDataList");
 							if (skills)
@@ -109,29 +103,29 @@ namespace MizuofCheatMod.UI
 			{
 				ModMenu.Card(delegate
 				{
-					ModMenu.BoldLabel("属性提升（已取消999上限）");
+					ModMenu.BoldLabel("属性提升");
 					ModMenu.Gap(2f);
 					if (ModMenu.GoldBtn("全属性 +10", 130))
 					{
 						Dyn s = GameReflect.Status;
 						if (s)
 						{
-							s.SI("phyKinryoku", s.I("phyKinryoku") + 10);
-							s.SI("phySeimei", s.I("phySeimei") + 10);
-							s.SI("phyKonjyo", s.I("phyKonjyo") + 10);
-							s.SI("phyBinsho", s.I("phyBinsho") + 10);
-							s.SI("intBungaku", s.I("intBungaku") + 10);
-							s.SI("intSanjyutsu", s.I("intSanjyutsu") + 10);
-							s.SI("intMajyutsu", s.I("intMajyutsu") + 10);
-							s.SI("intShinkou", s.I("intShinkou") + 10);
-							s.SI("chaBibou", s.I("chaBibou") + 10);
-							s.SI("chaShakou", s.I("chaShakou") + 10);
-							s.SI("chaReigi", s.I("chaReigi") + 10);
-							s.SI("chaDoutoku", s.I("chaDoutoku") + 10);
-							s.SI("senSouzou", s.I("senSouzou") + 10);
-							s.SI("senSousaku", s.I("senSousaku") + 10);
-							s.SI("senOnkan", s.I("senOnkan") + 10);
-							s.SI("senBikan", s.I("senBikan") + 10);
+							GameMethodResolver.SetAttribute("phyKinryoku", s.I("phyKinryoku") + 10);
+							GameMethodResolver.SetAttribute("phySeimei", s.I("phySeimei") + 10);
+							GameMethodResolver.SetAttribute("phyKonjyo", s.I("phyKonjyo") + 10);
+							GameMethodResolver.SetAttribute("phyBinsho", s.I("phyBinsho") + 10);
+							GameMethodResolver.SetAttribute("intBungaku", s.I("intBungaku") + 10);
+							GameMethodResolver.SetAttribute("intSanjyutsu", s.I("intSanjyutsu") + 10);
+							GameMethodResolver.SetAttribute("intMajyutsu", s.I("intMajyutsu") + 10);
+							GameMethodResolver.SetAttribute("intShinkou", s.I("intShinkou") + 10);
+							GameMethodResolver.SetAttribute("chaBibou", s.I("chaBibou") + 10);
+							GameMethodResolver.SetAttribute("chaShakou", s.I("chaShakou") + 10);
+							GameMethodResolver.SetAttribute("chaReigi", s.I("chaReigi") + 10);
+							GameMethodResolver.SetAttribute("chaDoutoku", s.I("chaDoutoku") + 10);
+							GameMethodResolver.SetAttribute("senSouzou", s.I("senSouzou") + 10);
+							GameMethodResolver.SetAttribute("senSousaku", s.I("senSousaku") + 10);
+							GameMethodResolver.SetAttribute("senOnkan", s.I("senOnkan") + 10);
+							GameMethodResolver.SetAttribute("senBikan", s.I("senBikan") + 10);
 							ModMenu.Label("已执行");
 						}
 					}
@@ -141,7 +135,7 @@ namespace MizuofCheatMod.UI
 				{
 					ModMenu.BoldLabel("课程次数");
 					ModMenu.Gap(2f);
-					ModMenu.InputRow("设定次数", GameReflect.Status, "curriculumSessions", ref _buf);
+					ModMenu.SmartInputRow("设定次数", GameReflect.Status, "curriculumSessions", ref _buf, v => GameMethodResolver.SetCurriculumSessions(v));
 				});
 			});
 		}

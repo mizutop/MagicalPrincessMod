@@ -251,6 +251,8 @@ namespace MizuofCheatMod.Utils
 			Register("academy_unlock", "技能解锁", FeatureStatus.Implemented, FeatureRequires.None);
 			Register("achievement_unlock", "成就解锁", FeatureStatus.Implemented, FeatureRequires.ReflectionCall);
 			Register("shop_all_items", "商店全物品", FeatureStatus.Implemented, FeatureRequires.HarmonyPatch);
+			Register("combat_stat_lock", "战斗属性锁定", FeatureStatus.Implemented, FeatureRequires.FrameUpdate);
+			Register("ending_all_jobs", "强制全结局可选", FeatureStatus.Implemented, FeatureRequires.HarmonyPatch);
 		}
 	}
 }

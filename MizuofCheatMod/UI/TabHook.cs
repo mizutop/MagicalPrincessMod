@@ -1,4 +1,5 @@
 using MelonLoader;
+using MizuofCheatMod.Harmony;
 using MizuofCheatMod.Utils;
 using UnityEngine;
 
@@ -11,7 +12,7 @@ namespace MizuofCheatMod.UI
 
 		internal static void Render()
 		{
-			ModMenu.Section("运行时类型扫描与验证");
+			ModMenu.Section("Hook 扫描与验证");
 
 			GUILayout.BeginHorizontal();
 			if (ModMenu.RoseBtn("刷新扫描", 80))
@@ -41,9 +42,7 @@ namespace MizuofCheatMod.UI
 
 			int en = FeatureRegistry.EnabledCount;
 			int tot = FeatureRegistry.TotalCount;
-			int vf = FeatureRegistry.VerifiedCount;
-			ModMenu.Label("功能状态 [" + en + "/" + tot + "] 开启  [" + vf + "] 已验证");
-			ModMenu.Label("按 F4 快速运行验证, 按 F2 导出详细报告");
+			ModMenu.Label("功能 [" + en + "/" + tot + "] 开启  F4=验证  F2=快照");
 		}
 
 		private static string FilterResult(string text, string filter)
@@ -67,97 +66,51 @@ namespace MizuofCheatMod.UI
 		internal static void RunVerification()
 		{
 			MelonLogger.Msg("");
-			MelonLogger.Msg("===========================================");
-			MelonLogger.Msg("[Hook Tab] MizuofCheatMod 功能验证报告");
-			MelonLogger.Msg("===========================================");
-			MelonLogger.Msg("");
-			MelonLogger.Msg("--- 运行时数据 ---");
+			MelonLogger.Msg("== [Hook] MizuofCheatMod 功能验证 ==");
+
 			Dyn m = GameReflect.MyData;
 			if (m)
 			{
-				MelonLogger.Msg("  [OK] MyData period=" + m.I("period"));
 				Dyn st = m.O("status");
-				if (st)
-				{
-					MelonLogger.Msg("  [OK] Status money=" + st.I("money") + " stress=" + st.I("stress"));
-				}
+				int money = st ? st.I("money") : 0;
+				int stress = st ? st.I("stress") : 0;
+				int period = m.I("period");
 				Dyn gs = m.O("gstatus");
-				if (gs)
-				{
-					MelonLogger.Msg("  [OK] GStatus loop=" + gs.I("loopCount"));
-				}
+				int loop = gs ? gs.I("loopCount") : 0;
 				Dyn items = m.O("itemDataList");
-				if (items)
-				{
-					MelonLogger.Msg("  [OK] Items x" + items.Count);
-				}
 				Dyn friends = m.O("friendDataList");
-				if (friends)
-				{
-					MelonLogger.Msg("  [OK] Friends x" + friends.Count);
-				}
+				MelonLogger.Msg("  数据: 期" + period + " 金钱" + money + " 压力" + stress +
+					" 周回" + loop + " 物品" + (items ? items.Count : 0) + " 好友" + (friends ? friends.Count : 0));
 			}
 			else
 			{
-				MelonLogger.Msg("  [--] MyData 不可用 (请进入游戏场景后重试)");
+				MelonLogger.Msg("  数据: MyData 不可用 (进入游戏场景后重试)");
 			}
+
 			Dyn ac = GameReflect.GetSingleton("AchievementController");
-			if (ac)
-			{
-				MelonLogger.Msg("  [OK] AchievementController");
-			}
 			Dyn bc = GameReflect.GetSingleton("BattleController");
-			if (bc)
-			{
-				MelonLogger.Msg("  [OK] BattleController");
-			}
+			MelonLogger.Msg("  AchievementController: " + (ac ? "可用" : "不可用"));
+			MelonLogger.Msg("  BattleController: " + (bc ? "可用" : "不可用"));
 
-			MelonLogger.Msg("");
-			MelonLogger.Msg("--- 功能实现/生效/未完成 ---");
-			System.Text.StringBuilder sb = new System.Text.StringBuilder();
-			foreach (var kv in FeatureRegistry.GetAllFeatures())
+			int en = FeatureRegistry.EnabledCount;
+			int tot = FeatureRegistry.TotalCount;
+			MelonLogger.Msg("  Patch: " + (PatchController.IsApplied ? "已注册" : "未注册"));
+			MelonLogger.Msg("  功能: " + en + "/" + tot + " 开启  " + FeatureRegistry.ImplementedCount + " 已实现");
+
+			if (en > 0)
 			{
-				FeatureEntry fe = kv.Value;
-				string statusIcon;
-				switch (fe.Status)
+				System.Text.StringBuilder sb = new System.Text.StringBuilder("  当前开启: ");
+				foreach (var kv in FeatureRegistry.GetAllFeatures())
 				{
-					case FeatureStatus.Implemented:
-						statusIcon = "已实现";
-						break;
-					case FeatureStatus.Partial:
-						statusIcon = "部分";
-						break;
-					case FeatureStatus.Unimplemented:
-						statusIcon = "未完成";
-						break;
-					default:
-						statusIcon = "未知";
-						break;
+					if (kv.Value.Enabled)
+					{
+						sb.Append(kv.Value.DisplayName);
+						sb.Append(" ");
+					}
 				}
-				string enabledIcon = fe.Enabled ? "生效" : "关闭";
-				string verifIcon = fe.Verified ? "已测" : "待测";
-				sb.Append("  [");
-				sb.Append(enabledIcon);
-				sb.Append("][");
-				sb.Append(statusIcon);
-				sb.Append("][");
-				sb.Append(verifIcon);
-				sb.Append("] ");
-				sb.Append(fe.Key);
-				sb.Append(" (");
-				sb.Append(fe.DisplayName);
-				sb.AppendLine(")");
+				MelonLogger.Msg(sb.ToString());
 			}
-			MelonLogger.Msg(sb.ToString().TrimEnd());
-
-			MelonLogger.Msg("--- 汇总 ---");
-			MelonLogger.Msg("  功能总数: " + FeatureRegistry.TotalCount);
-			MelonLogger.Msg("  已实现: " + FeatureRegistry.ImplementedCount);
-			MelonLogger.Msg("  部分实现: " + FeatureRegistry.PartialCount);
-			MelonLogger.Msg("  未完成: " + FeatureRegistry.UnimplementedCount);
-			MelonLogger.Msg("  当前生效: " + FeatureRegistry.EnabledCount);
-			MelonLogger.Msg("  已验证: " + FeatureRegistry.VerifiedCount);
-			MelonLogger.Msg("===========================================");
+			MelonLogger.Msg("========================");
 		}
 	}
 }

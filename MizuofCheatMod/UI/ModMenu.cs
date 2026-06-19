@@ -356,6 +356,27 @@ namespace MizuofCheatMod.UI
 			GUILayout.EndHorizontal();
 		}
 
+		/// <summary>
+		/// 使用 GameMethodResolver 优先调用游戏方法的输入行
+		/// </summary>
+		internal static void SmartInputRow(string label, Dyn target, string field, ref string buf, Action<int> resolverSet)
+		{
+			GUILayout.BeginHorizontal(GUILayout.Height(20));
+			GUILayout.Label(label, GUIStyleBuilder.ToggleText, GUILayout.Width(100));
+			if (target?.Obj != null)
+			{
+				int val = target.I(field);
+				GUILayout.Label(val.ToString(), GUIStyleBuilder.ValueText, GUILayout.Width(50));
+			}
+			buf = GUILayout.TextField(buf ?? string.Empty, GUIStyleBuilder.TextField,
+				GUILayout.Width(70), GUILayout.Height(18));
+			if (RoseBtn("Set", 44) && target?.Obj != null && int.TryParse(buf, out int parsed))
+			{
+				resolverSet?.Invoke(parsed);
+			}
+			GUILayout.EndHorizontal();
+		}
+
 		internal static void InputRowEnum(string label, Dyn target, string field, ref string buf)
 		{
 			GUILayout.BeginHorizontal(GUILayout.Height(20));

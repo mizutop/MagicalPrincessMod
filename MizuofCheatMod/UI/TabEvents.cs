@@ -23,25 +23,60 @@ namespace MizuofCheatMod.UI
 				// === 结局触发 ===
 				ModMenu.Card(delegate
 				{
-					ModMenu.BoldLabel("结局直接触发");
+					ModMenu.BoldLabel("结局控制");
 					ModMenu.Gap(2f);
 
-					// 显示当前结局信息
-					Dyn ed = GameReflect.MyData.O("endingJob");
-					if (ed)
+					// 结局替换开关（最多替换6个）
+					bool allJobs = FeatureRegistry.IsEnabled("ending_all_jobs");
+					if (ModMenu.Toggle("替换结局选择面板", allJobs,
+						"开启后游戏的结局选择界面只显示你选的 ≤6 个结局"))
 					{
-						ModMenu.Label("当前结局: " + ed.S("name") + " (ID:" + ed.I("jobId") + ")");
+						bool newVal = !allJobs;
+						FeatureRegistry.SetEnabled("ending_all_jobs", newVal);
+						if (!newVal)
+						{
+							Harmony.PatchController.SetCustomJobIds(null);
+						}
+					}
+					if (allJobs)
+					{
+						int count = Harmony.PatchController.GetCustomJobIds().Count;
+						ModMenu.Label("已选 " + count + " / 6 个结局");
 					}
 					else
 					{
-						ModMenu.Label("当前无结局数据");
+						ModMenu.Label("关闭时使用游戏原本的结局判定");
+					}
+					ModMenu.Gap(2f);
+
+					// 显示当前周期和结局信息
+					Dyn mdInfo = GameReflect.MyData;
+					if (mdInfo)
+					{
+						int curPeriod = mdInfo.I("period");
+						Dyn pdl = mdInfo.O("periodDataList");
+						int maxP = pdl ? pdl.Count : 0;
+						ModMenu.Label("当前周期: " + curPeriod + " / " + (maxP > 0 ? maxP.ToString() : "?"));
+					}
+					ModMenu.Gap(2f);
+
+					Dyn ed = GameReflect.MyData.O("endingJob");
+					if (ed && ed.Obj != null)
+					{
+						ModMenu.Label("已设结局: " + ed.S("name") + " (ID:" + ed.I("jobId") + ")");
+					}
+					else
+					{
+						ModMenu.Label("未设定结局");
 					}
 					ModMenu.Gap(4f);
 
-					// 列出所有可选结局
-					ModMenu.BoldLabel("可选结局列表 (点击选择)");
+					// 列出所有可选结局（多选，最多6个）
+					ModMenu.BoldLabel("全部结局列表 (勾选替换，最多6个)");
 					ModMenu.Gap(2f);
-					_endingScroll = GUILayout.BeginScrollView(_endingScroll, GUILayout.Height(180));
+					var savedIds = new System.Collections.Generic.HashSet<int>(
+						Harmony.PatchController.GetCustomJobIds());
+					_endingScroll = GUILayout.BeginScrollView(_endingScroll, GUILayout.Height(200));
 					Dyn endingJobs = GameReflect.MyData.O("endingJobDataList");
 					if (endingJobs)
 					{
@@ -49,16 +84,32 @@ namespace MizuofCheatMod.UI
 						{
 							string jName = endingJobs[i].S("name");
 							int jId = endingJobs[i].I("jobId");
-							bool selected = (i == _selectedEndingJob);
+							bool isChecked = savedIds.Contains(jId);
 							Color prev = GUI.backgroundColor;
-							if (selected)
+							if (isChecked)
 							{
 								GUI.backgroundColor = Color.green;
 							}
-							if (GUILayout.Button("[" + jId + "] " + jName,
+							if (GUILayout.Button((isChecked ? "✓ " : "  ") + "[" + jId + "] " + jName,
 								GUIStyleBuilder.PillBtn, GUILayout.Height(20)))
 							{
-								_selectedEndingJob = i;
+								if (allJobs)
+								{
+									var current = Harmony.PatchController.GetCustomJobIds();
+									if (current.Contains(jId))
+									{
+										current.Remove(jId);
+									}
+									else if (current.Count < 6)
+									{
+										current.Add(jId);
+									}
+									Harmony.PatchController.SetCustomJobIds(current);
+								}
+								else
+								{
+									_selectedEndingJob = i;
+								}
 							}
 							GUI.backgroundColor = prev;
 						}
@@ -71,107 +122,72 @@ namespace MizuofCheatMod.UI
 
 					ModMenu.Gap(4f);
 
-					// 触发按钮
-					if (_selectedEndingJob >= 0 && endingJobs && _selectedEndingJob < endingJobs.Count)
+					// 触发 / 应用按钮
+					bool eaJobs = FeatureRegistry.IsEnabled("ending_all_jobs");
+					if (eaJobs)
+					{
+						int cnt = Harmony.PatchController.GetCustomJobIds().Count;
+						if (cnt > 0)
+						{
+							ModMenu.Label("已选 " + cnt + " 个结局，进入游戏毕业流程即可看到替换效果");
+						}
+						else
+						{
+							ModMenu.Label("请勾选最多6个结局来替换游戏的选择面板");
+						}
+					}
+					else if (_selectedEndingJob >= 0 && endingJobs && _selectedEndingJob < endingJobs.Count)
 					{
 						if (ModMenu.GoldBtn("设定此结局并触发", 180))
 						{
-							// 1. 将选定结局写入 MyData.endingJob
 							object jobObj = endingJobs[_selectedEndingJob].Obj;
-							if (jobObj != null)
+							int jId = endingJobs[_selectedEndingJob].I("jobId");
+							string jName = endingJobs[_selectedEndingJob].S("name");
+
+							bool triggered = EndingTriggerDiscovery.TriggerEnding(jobObj, jId);
+							Dyn md = GameReflect.MyData;
+							if (md)
 							{
-								Utils.GameReflect.SetField(GameReflect.MyData.Obj, "endingJob", jobObj);
-								MelonLogger.Msg("[结局] 已设定结局: " + endingJobs[_selectedEndingJob].S("name"));
+								int after = md.I("period");
+								Dyn ej = md.O("endingJob");
+								string ejName = ej ? ej.S("name") : "(无)";
+								ModMenu.Label("结局: " + ejName + " | period: " + after + " | " + (triggered ? "[触发]" : "[未触发]"));
 							}
-
-							// 2. 设置 ending flag
-							Dyn gs = GameReflect.GStatus;
-							if (gs)
+							else
 							{
-								gs.SI("isTrueEndingUnlocked", 1);
+								ModMenu.Label(triggered ? "结局已触发" : "触发失败");
 							}
-
-							// 3. 尝试多种方式触发结局场景
-							Dyn gc = GameReflect.GetSingleton("GameController");
-							bool triggered = false;
-
-							// 方式A: GameController.LoadEndingDemoScene
-							if (gc)
-							{
-								object result = GameReflect.Call(gc.Obj, "LoadEndingDemoScene");
-								if (result != null || true)
-								{
-									triggered = true;
-									MelonLogger.Msg("[结局] GameController.LoadEndingDemoScene() 已调用");
-								}
-							}
-
-							// 方式B: 通过 StoryDemoScene 直接设置并播放结局
-							if (!triggered)
-							{
-								Dyn sds = GameReflect.GetSingleton("StoryDemoScene");
-								if (sds)
-								{
-									sds.CM("SetEndingDemoScene");
-									triggered = true;
-									MelonLogger.Msg("[结局] StoryDemoScene.SetEndingDemoScene() 已调用");
-								}
-							}
-
-							// 方式C: EndingController 初始化
-							if (!triggered)
-							{
-								Dyn ec = GameReflect.GetSingleton("EndingController");
-								if (ec)
-								{
-									ec.CM("Init");
-									triggered = true;
-									MelonLogger.Msg("[结局] EndingController.Init() 已调用");
-								}
-							}
-
-							// 方式D: Unity SceneManager 直接加载结局场景
-							if (!triggered)
-							{
-								try
-								{
-									string[] sceneCandidates = { "Ending", "BadEnd", "EndingScene", "StaffRoll" };
-									foreach (string sc in sceneCandidates)
-									{
-										try
-										{
-											UnityEngine.SceneManagement.SceneManager.LoadScene(sc);
-											triggered = true;
-											MelonLogger.Msg("[结局] SceneManager.LoadScene(" + sc + ") 已调用");
-											break;
-										}
-										catch { }
-									}
-								}
-								catch { }
-							}
-
-							// 方式E: CloseMonth 推进月结判定
-							if (!triggered)
-							{
-								bool wasFrozen = FeatureRegistry.IsEnabled("time_freeze");
-								if (wasFrozen) FeatureRegistry.SetEnabled("time_freeze", false);
-								if (gc)
-								{
-									gc.CM("CloseMonth");
-									MelonLogger.Msg("[结局] GameController.CloseMonth() 已调用");
-								}
-								if (wasFrozen) FeatureRegistry.SetEnabled("time_freeze", true);
-								triggered = true;
-							}
-
-							ModMenu.Label("已触发");
 						}
 					}
 					else
 					{
-						ModMenu.Label("请先在列表中选择一个结局");
+						ModMenu.Label("在列表中点击一个结局→触发; 或开启替换模式选多个");
 					}
+				});
+
+				// === 快速结局（剩余回合=1） ===
+				ModMenu.Card(delegate
+				{
+					ModMenu.BoldLabel("快速触发结局");
+					ModMenu.Gap(2f);
+					ModMenu.Label("无需选择角色，直接推进到游戏终点");
+					ModMenu.Gap(2f);
+					if (ModMenu.CoralBtn("强制推进触发结局", 220))
+					{
+						bool triggered = EndingTriggerDiscovery.QuickTriggerEnding();
+						Dyn md = GameReflect.MyData;
+						if (md)
+						{
+							int after = md.I("period");
+							ModMenu.Label("已执行 (period: " + after + ") " + (triggered ? "结局已触发" : "可能未触发"));
+						}
+						else
+						{
+							ModMenu.Label("已执行" + (triggered ? " [触发]" : " [可能未触发]"));
+						}
+					}
+					ModMenu.Label("将推进到最终周期，触发游戏自然结局判定");
+					ModMenu.Label("配合「结局控制」选择具体结局一起使用");
 				});
 
 				// === 技能点管理 ===
@@ -189,10 +205,10 @@ namespace MizuofCheatMod.UI
 						ModMenu.Gap(2f);
 						if (ModMenu.GoldBtn("全部点亮", 100))
 						{
-							s.SI("isUnlockSkillPhysical", 1);
-							s.SI("isUnlockSkillIntelligence", 1);
-							s.SI("isUnlockSkillCharm", 1);
-							s.SI("isUnlockSkillSense", 1);
+							GameMethodResolver.UnlockSkill("isUnlockSkillPhysical");
+							GameMethodResolver.UnlockSkill("isUnlockSkillIntelligence");
+							GameMethodResolver.UnlockSkill("isUnlockSkillCharm");
+							GameMethodResolver.UnlockSkill("isUnlockSkillSense");
 							// 同时点亮技能列表中所有技能
 							Dyn skills = GameReflect.MyData.O("skillDataList");
 							if (skills)
@@ -243,6 +259,21 @@ namespace MizuofCheatMod.UI
 					{
 						ModMenu.Label("  " + range);
 					}
+				});
+
+				// === 结局诊断 ===
+				ModMenu.Card(delegate
+				{
+					ModMenu.BoldLabel("结局诊断工具");
+					ModMenu.Gap(2f);
+					if (ModMenu.GoldBtn("诊断结局API", 150))
+					{
+						EndingTriggerDiscovery.Discover();
+						ModMenu.Label("诊断完成，请查看 MelonLoader 日志");
+					}
+					ModMenu.Label("扫描 MyData/GStatus/PeriodData 所有字段");
+					ModMenu.Label("分析周期上限和剩余回合相关数据");
+					ModMenu.Label("结果输出到日志窗口");
 				});
 
 				// === 成就操作快捷 ===

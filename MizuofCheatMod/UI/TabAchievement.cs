@@ -40,7 +40,7 @@ namespace MizuofCheatMod.UI
 				});
 				ModMenu.Card(delegate
 				{
-					ModMenu.BoldLabel("成就列表 (已完成/未完成)");
+					ModMenu.BoldLabel("成就列表");
 					ModMenu.Gap(2f);
 					_achScroll = GUILayout.BeginScrollView(_achScroll, GUILayout.Height(300));
 					Dyn gs2 = GameReflect.GStatus;

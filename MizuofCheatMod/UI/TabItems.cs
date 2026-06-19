@@ -43,7 +43,7 @@ namespace MizuofCheatMod.UI
 						_scroll = Vector2.zero;
 					}
 					GUILayout.EndHorizontal();
-					ModMenu.Label("输入物品名称搜索，支持中英文");
+					ModMenu.Label("支持中英文搜索，留空显示全部");
 				});
 				ModMenu.Card(delegate
 				{
@@ -106,15 +106,15 @@ namespace MizuofCheatMod.UI
 							ModMenu.Label("x" + cnt);
 							if (ModMenu.RoseBtn("+1", 28))
 							{
-								item.O("data").SI("count", cnt + 1);
+								GameMethodResolver.SetItemCount(item, cnt + 1);
 							}
 							if (ModMenu.RoseBtn("+10", 32))
 							{
-								item.O("data").SI("count", cnt + 10);
+								GameMethodResolver.SetItemCount(item, cnt + 10);
 							}
 							if (ModMenu.GoldBtn("x99", 28))
 							{
-								item.O("data").SI("count", 99);
+								GameMethodResolver.SetItemCount(item, 99);
 							}
 							GUILayout.EndHorizontal();
 							shown++;
@@ -168,7 +168,7 @@ namespace MizuofCheatMod.UI
 						{
 							for (int i = 0; i < items.Count; i++)
 							{
-								items[i].O("data").SI("count", 99);
+								GameMethodResolver.SetItemCount(items[i], 99);
 							}
 							ModMenu.Label("操作完成");
 						}
@@ -181,7 +181,7 @@ namespace MizuofCheatMod.UI
 						{
 							for (int i = 0; i < items.Count; i++)
 							{
-								items[i].O("data").SI("count", 0);
+								GameMethodResolver.SetItemCount(items[i], 0);
 							}
 							ModMenu.Label("已清除");
 						}

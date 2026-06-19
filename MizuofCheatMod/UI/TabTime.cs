@@ -10,7 +10,7 @@ namespace MizuofCheatMod.UI
 
 		internal static void Render()
 		{
-			ModMenu.Section("时间控制");
+			ModMenu.Section("时间");
 			ModMenu.TwoCol(delegate
 			{
 				ModMenu.Card(delegate
@@ -40,15 +40,15 @@ namespace MizuofCheatMod.UI
 					GUILayout.BeginHorizontal();
 					if (ModMenu.RoseBtn("白天", 70))
 					{
-						GameReflect.MyData.SI("situation", 1);
+						GameMethodResolver.SetSituation(1);
 					}
 					if (ModMenu.RoseBtn("夜晚", 70))
 					{
-						GameReflect.MyData.SI("situation", 2);
+						GameMethodResolver.SetSituation(2);
 					}
 					if (ModMenu.RoseBtn("红月", 70))
 					{
-						GameReflect.MyData.SI("situation", 3);
+						GameMethodResolver.SetSituation(3);
 					}
 					GUILayout.EndHorizontal();
 					ModMenu.Label("修改situation值切换时刻");
@@ -59,8 +59,16 @@ namespace MizuofCheatMod.UI
 				{
 					ModMenu.BoldLabel("时间跳转");
 					ModMenu.Gap(2f);
-					ModMenu.InputRow("跳转到第", GameReflect.MyData, "period", ref _buf);
-					ModMenu.Label("输入期数(0-42)后点 Set");
+					GUILayout.BeginHorizontal();
+					GUILayout.Label("跳转到第", GUIStyleBuilder.ToggleText, GUILayout.Width(60));
+					_buf = GUILayout.TextField(_buf ?? string.Empty, GUIStyleBuilder.TextField,
+						GUILayout.Width(60), GUILayout.Height(18));
+					if (ModMenu.RoseBtn("跳转", 50) && int.TryParse(_buf, out int target))
+					{
+						JumpToPeriod(target);
+					}
+					GUILayout.EndHorizontal();
+					ModMenu.Label("输入目标期数后点跳转，自动推进时间");
 				});
 				ModMenu.Card(delegate
 				{
@@ -85,6 +93,36 @@ namespace MizuofCheatMod.UI
 					ModMenu.Label("强制触发月末结算进入下一月");
 				});
 			});
+		}
+
+		/// <summary>
+		/// 调度时间跳转（通过 Main 的帧更新延迟执行，防止 GUI 重入）
+		/// </summary>
+		private static void JumpToPeriod(int targetPeriod)
+		{
+			Dyn md = GameReflect.MyData;
+			if (!md)
+			{
+				ModMenu.Label("游戏数据不可用");
+				return;
+			}
+
+			int current = md.I("period");
+			if (targetPeriod <= current)
+			{
+				ModMenu.Label("目标期数必须大于当前期数 (" + current + ")");
+				return;
+			}
+
+			int steps = targetPeriod - current;
+			if (steps > 50)
+			{
+				ModMenu.Label("一次最多跳转50期，请分批操作");
+				return;
+			}
+
+			Main.ScheduleTimeJump(targetPeriod);
+			ModMenu.Label("已调度跳转至第 " + targetPeriod + " 期");
 		}
 	}
 }

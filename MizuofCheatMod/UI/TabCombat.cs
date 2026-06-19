@@ -10,6 +10,7 @@ namespace MizuofCheatMod.UI
 		private static string _bufSPD = string.Empty, _bufBATK = string.Empty, _bufWATK = string.Empty;
 		private static string _bufMDEF = string.Empty, _bufSTA = string.Empty, _bufMSTA = string.Empty;
 		private static string _bufLUCK = string.Empty, _bufBMale = string.Empty, _bufBFemale = string.Empty;
+		private static bool _statLock;
 
 		internal static void Render()
 		{
@@ -25,14 +26,14 @@ namespace MizuofCheatMod.UI
 					{
 						FeatureRegistry.SetEnabled("combat_god", !god);
 					}
-					ModMenu.Label("开启后所有伤害归零（含正式战斗）");
+					ModMenu.Label("开启后角色不会受到伤害");
 					ModMenu.Gap(4f);
 					bool hk = FeatureRegistry.IsEnabled("combat_1hk");
 					if (ModMenu.Toggle("一击必杀", hk, "攻击即秒杀敌人"))
 					{
 						FeatureRegistry.SetEnabled("combat_1hk", !hk);
 					}
-					ModMenu.Label("开启后对敌人造成99999伤害（含正式战斗）");
+					ModMenu.Label("开启后攻击即秒杀敌人");
 				});
 				ModMenu.Card(delegate
 				{
@@ -47,6 +48,21 @@ namespace MizuofCheatMod.UI
 					{
 						ModMenu.Label("战斗未开始或无战斗场景");
 					}
+				});
+				ModMenu.Card(delegate
+				{
+					ModMenu.BoldLabel("战斗属性锁定");
+					ModMenu.Gap(2f);
+					if (ModMenu.Toggle("战斗中锁定属性", _statLock, "战斗中每帧恢复bstatus"))
+					{
+						_statLock = !_statLock;
+						FeatureRegistry.SetEnabled("combat_stat_lock", _statLock);
+						if (_statLock)
+						{
+							Main.CacheCombatStats();
+						}
+					}
+					ModMenu.Label("开启后战斗中每帧恢复bstatus值");
 				});
 				ModMenu.Card(delegate
 				{
@@ -71,7 +87,7 @@ namespace MizuofCheatMod.UI
 			{
 				ModMenu.Card(delegate
 				{
-					ModMenu.BoldLabel("爱丽丝战斗力（可编辑）");
+					ModMenu.BoldLabel("爱丽丝战斗力");
 					ModMenu.Gap(2f);
 					Dyn bs = GameReflect.MyData.O("bstatus");
 					if (bs)
@@ -95,7 +111,8 @@ namespace MizuofCheatMod.UI
 							bs.SF("speed", 999); bs.SF("stamina", 999); bs.SF("batk", 999);
 							bs.SF("watk", 999); bs.SF("mdefence", 999); bs.SF("mstamina", 999);
 							bs.SF("luck", 999); bs.SF("buffMale", 999); bs.SF("buffFemale", 999);
-							ModMenu.Label("已执行");
+							Main.CacheCombatStats();
+							ModMenu.Label("已执行并缓存");
 						}
 					}
 					else
@@ -123,6 +140,7 @@ namespace MizuofCheatMod.UI
 			if (ModMenu.RoseBtn("Set", 36) && target?.Obj != null && float.TryParse(buf, out float parsed))
 			{
 				target.SF(field, parsed);
+				Main.CacheCombatStats();
 			}
 			GUILayout.EndHorizontal();
 		}

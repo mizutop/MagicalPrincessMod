@@ -11,6 +11,32 @@ namespace MizuofCheatMod.Harmony
 		private static bool _patchesApplied;
 		private static HarmonyLib.Harmony _instance;
 
+		// 用户自定义结局列表（最多6个），由 TabEvents 设置
+		private static readonly System.Collections.Generic.List<int> _customJobIds =
+			new System.Collections.Generic.List<int>();
+
+		/// <summary>
+		/// 设置用户选择的替换结局 ID 列表（最多6个）
+		/// </summary>
+		internal static void SetCustomJobIds(System.Collections.Generic.List<int> ids)
+		{
+			_customJobIds.Clear();
+			if (ids != null)
+			{
+				foreach (int id in ids)
+				{
+					if (!_customJobIds.Contains(id))
+						_customJobIds.Add(id);
+					if (_customJobIds.Count >= 6) break;
+				}
+			}
+		}
+
+		internal static System.Collections.Generic.List<int> GetCustomJobIds()
+		{
+			return new System.Collections.Generic.List<int>(_customJobIds);
+		}
+
 		internal static bool IsApplied
 		{
 			get
@@ -29,11 +55,14 @@ namespace MizuofCheatMod.Harmony
 			{
 				_instance = new HarmonyLib.Harmony("MizuofCheatMod.Harmony");
 				PatchBattleCharacterDamage();
+				PatchBattleCharacterExtraDamage();
+				PatchObjectBaseDamage();
 				PatchItemPrices();
 				PatchTimeFreeze();
 				PatchShopAllItems();
+				PatchEndingAllJobs();
 				_patchesApplied = true;
-				MelonLogger.Msg("[Harmony] 所有Patch已注册 (battle, items, time, shop_all)");
+				MelonLogger.Msg("[Harmony] 所有Patch已注册 (battle, items, time, shop, ending)");
 			}
 			catch (Exception ex)
 			{
@@ -172,6 +201,143 @@ namespace MizuofCheatMod.Harmony
 		}
 
 		// ================================================================
+		//  combat_god + combat_1hk: 额外战斗伤害路径补丁
+		//  覆盖 SetDamage、AddDamage、OnDamage 等非标准伤害路径
+		// ================================================================
+		private static void PatchBattleCharacterExtraDamage()
+		{
+			Type bcType = Utils.GameReflect.ResolveType("BattleCharacter");
+			if (bcType == null) return;
+
+			int count = 0;
+
+			// SetDamage(float dmg) — 通用伤害接口
+			MethodInfo setDmg = bcType.GetMethod("SetDamage",
+				BindingFlags.Public | BindingFlags.Instance, null,
+				new Type[] { typeof(float) }, null);
+			if (setDmg != null)
+			{
+				MethodInfo prefix = typeof(PatchController).GetMethod("CombatGodPrefixExtra",
+					BindingFlags.NonPublic | BindingFlags.Static, null,
+					new[] { typeof(BattleCharacter) }, null);
+				_instance.Patch(setDmg, new HarmonyLib.HarmonyMethod(prefix), null, null);
+				count++;
+				MelonLogger.Msg("[Harmony] combat_god → BattleCharacter.SetDamage [Prefix]");
+
+				MethodInfo hkPrefix = typeof(PatchController).GetMethod("Combat1HKPrefixExtra",
+					BindingFlags.NonPublic | BindingFlags.Static, null,
+					new[] { typeof(float).MakeByRefType(), typeof(BattleCharacter) }, null);
+				_instance.Patch(setDmg, new HarmonyLib.HarmonyMethod(hkPrefix), null, null);
+				count++;
+				MelonLogger.Msg("[Harmony] combat_1hk → BattleCharacter.SetDamage [Prefix]");
+			}
+
+			// AddDamage(float dmg) — DOT/持续伤害
+			MethodInfo addDmg = bcType.GetMethod("AddDamage",
+				BindingFlags.Public | BindingFlags.Instance, null,
+				new Type[] { typeof(float) }, null);
+			if (addDmg != null)
+			{
+				MethodInfo prefix = typeof(PatchController).GetMethod("CombatGodPrefixExtra",
+					BindingFlags.NonPublic | BindingFlags.Static, null,
+					new[] { typeof(BattleCharacter) }, null);
+				_instance.Patch(addDmg, new HarmonyLib.HarmonyMethod(prefix), null, null);
+				count++;
+				MelonLogger.Msg("[Harmony] combat_god → BattleCharacter.AddDamage [Prefix]");
+
+				MethodInfo hkPrefix = typeof(PatchController).GetMethod("Combat1HKPrefixExtra",
+					BindingFlags.NonPublic | BindingFlags.Static, null,
+					new[] { typeof(float).MakeByRefType(), typeof(BattleCharacter) }, null);
+				_instance.Patch(addDmg, new HarmonyLib.HarmonyMethod(hkPrefix), null, null);
+				count++;
+				MelonLogger.Msg("[Harmony] combat_1hk → BattleCharacter.AddDamage [Prefix]");
+			}
+
+			if (count == 0)
+			{
+				MelonLogger.Msg("[Harmony] BattleCharacter 额外伤害方法未找到，跳过");
+			}
+		}
+
+		// ================================================================
+		//  combat_god + combat_1hk: ObjectBase.OnDamage 野外/环境伤害
+		// ================================================================
+		private static void PatchObjectBaseDamage()
+		{
+			Type obType = Utils.GameReflect.ResolveType("ObjectBase");
+			if (obType == null) return;
+
+			MethodInfo onDmg = obType.GetMethod("OnDamage",
+				BindingFlags.Public | BindingFlags.Instance, null,
+				new Type[] { typeof(float) }, null);
+			if (onDmg == null)
+			{
+				onDmg = obType.GetMethod("OnDamage",
+					BindingFlags.Public | BindingFlags.Instance, null,
+					new Type[] { typeof(float), typeof(int) }, null);
+			}
+			if (onDmg == null)
+			{
+				MelonLogger.Msg("[Harmony] ObjectBase.OnDamage 未找到，跳过环境伤害Patch");
+				return;
+			}
+
+			MethodInfo godPrefix = typeof(PatchController).GetMethod("CombatGodPrefixExtra",
+				BindingFlags.NonPublic | BindingFlags.Static, null,
+				new[] { typeof(object) }, null);
+			_instance.Patch(onDmg, new HarmonyLib.HarmonyMethod(godPrefix), null, null);
+			MelonLogger.Msg("[Harmony] combat_god → ObjectBase.OnDamage [Prefix]");
+
+			MethodInfo hkPrefix = typeof(PatchController).GetMethod("Combat1HKPrefixExtra",
+				BindingFlags.NonPublic | BindingFlags.Static, null,
+				new[] { typeof(float).MakeByRefType(), typeof(object) }, null);
+			_instance.Patch(onDmg, new HarmonyLib.HarmonyMethod(hkPrefix), null, null);
+			MelonLogger.Msg("[Harmony] combat_1hk → ObjectBase.OnDamage [Prefix]");
+		}
+
+		// --- Prefix 方法（额外伤害路径的通用版） ---
+
+		private static bool CombatGodPrefixExtra(BattleCharacter __instance)
+		{
+			if (!Utils.FeatureRegistry.IsEnabled("combat_god"))
+				return true;
+			return __instance.isEnemySide;
+		}
+
+		private static bool Combat1HKPrefixExtra(ref float dmg, BattleCharacter __instance)
+		{
+			if (!Utils.FeatureRegistry.IsEnabled("combat_1hk"))
+				return true;
+			if (__instance.isEnemySide)
+				dmg = 99999f;
+			return true;
+		}
+
+		/// <summary>
+		/// ObjectBase.OnDamage 的 combat_god — 检查 __instance 是否可转为 BattleCharacter
+		/// </summary>
+		private static bool CombatGodPrefixExtra(object __instance)
+		{
+			if (!Utils.FeatureRegistry.IsEnabled("combat_god"))
+				return true;
+			if (__instance is BattleCharacter bc)
+				return bc.isEnemySide;
+			return true;
+		}
+
+		/// <summary>
+		/// ObjectBase.OnDamage 的 combat_1hk
+		/// </summary>
+		private static bool Combat1HKPrefixExtra(ref float dmg, object __instance)
+		{
+			if (!Utils.FeatureRegistry.IsEnabled("combat_1hk"))
+				return true;
+			if (__instance is BattleCharacter bc && bc.isEnemySide)
+				dmg = 99999f;
+			return true;
+		}
+
+		// ================================================================
 		//  item_free_shop + item_max_sell: 拦截 ItemData 价格属性
 		//  反编译证明: 不存在 ShopSystem 类，价格通过 ItemData.priceBuy/
 		//  ItemData.priceSellItem 计算属性完成
@@ -295,6 +461,67 @@ namespace MizuofCheatMod.Harmony
 		private static bool TimeFreezePrefix()
 		{
 			return !Utils.FeatureRegistry.IsEnabled("time_freeze");
+		}
+
+		// ================================================================
+		//  ending_all_jobs: Hook GetEnableJobList 返回全部结局
+		//  游戏选择界面只显示通过 stat/event 过滤后的结局，
+		//  此 Patch 绕过过滤，让所有 50+ 个结局在游戏内可选
+		// ================================================================
+		private static void PatchEndingAllJobs()
+		{
+			Type myDataType = Utils.GameReflect.ResolveType("MyData");
+			if (myDataType == null)
+			{
+				MelonLogger.Msg("[Harmony] MyData 未找到，ending_all_jobs跳过");
+				return;
+			}
+
+			MethodInfo original = myDataType.GetMethod("GetEnableJobList",
+				BindingFlags.Public | BindingFlags.Instance);
+			if (original == null)
+			{
+				MelonLogger.Msg("[Harmony] MyData.GetEnableJobList 未找到，ending_all_jobs跳过");
+				return;
+			}
+
+			MethodInfo postfix = typeof(PatchController).GetMethod("AllEndingJobsPostfix",
+				BindingFlags.NonPublic | BindingFlags.Static);
+			_instance.Patch(original, null, new HarmonyLib.HarmonyMethod(postfix), null);
+			MelonLogger.Msg("[Harmony] ending_all_jobs → MyData.GetEnableJobList [Postfix]");
+		}
+
+		private static void AllEndingJobsPostfix(ref System.Collections.Generic.List<EndingJobData> __result, MyData __instance)
+		{
+			if (!Utils.FeatureRegistry.IsEnabled("ending_all_jobs"))
+			{
+				return;
+			}
+			if (_customJobIds.Count == 0)
+			{
+				// 未选择任何自定义结局时，仅返回 Queen（第一个）避免空列表
+				__result = new System.Collections.Generic.List<EndingJobData>
+				{
+					__instance.endingJobDataList[0]
+				};
+				return;
+			}
+			// 只返回用户选择的结局（最多6个）
+			var filtered = new System.Collections.Generic.List<EndingJobData>();
+			foreach (int id in _customJobIds)
+			{
+				// endingJobDataList 索引从 1 开始对应 jobId
+				int index = id - 1;
+				if (index >= 0 && index < __instance.endingJobDataList.Count)
+				{
+					filtered.Add(__instance.endingJobDataList[index]);
+				}
+			}
+			if (filtered.Count == 0)
+			{
+				filtered.Add(__instance.endingJobDataList[0]);
+			}
+			__result = filtered;
 		}
 
 		// ================================================================

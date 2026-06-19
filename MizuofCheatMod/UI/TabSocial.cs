@@ -36,13 +36,7 @@ namespace MizuofCheatMod.UI
 						{
 							for (int i = 0; i < friends.Count; i++)
 							{
-								Dyn data = friends[i].O("data");
-								if (data)
-								{
-									data.SI("fMeet", 100);
-									data.SI("fFavarite", 100);
-									data.SI("fLoveEvents", 5);
-								}
+								GameMethodResolver.SetFriendMax(friends[i].O("data"));
 							}
 							ModMenu.Label("已完成");
 						}
@@ -61,23 +55,23 @@ namespace MizuofCheatMod.UI
 						Dyn data = friends[_selected].O("data");
 						if (data)
 						{
-							ModMenu.InputRow("好感度(fMeet)", data, "fMeet", ref _bufMeet);
-							ModMenu.InputRow("亲密度(fFav)", data, "fFavarite", ref _bufFav);
-							ModMenu.InputRow("恋爱等级", data, "fLoveEvents", ref _bufLove);
+							ModMenu.SmartInputRow("好感度", data, "fMeet", ref _bufMeet, v => GameMethodResolver.SetFriendField(data, "fMeet", v));
+							ModMenu.SmartInputRow("亲密度", data, "fFavarite", ref _bufFav, v => GameMethodResolver.SetFriendField(data, "fFavarite", v));
+							ModMenu.SmartInputRow("恋爱等级", data, "fLoveEvents", ref _bufLove, v => GameMethodResolver.SetFriendField(data, "fLoveEvents", v));
 							ModMenu.Gap(2f);
-							ModMenu.InputRow("对话次数", data, "fConversation", ref _bufConv);
-							ModMenu.InputRow("约会次数", data, "fDate", ref _bufDate);
-							ModMenu.InputRow("送礼次数", data, "fPresent", ref _bufPresent);
+							ModMenu.SmartInputRow("对话次数", data, "fConversation", ref _bufConv, v => GameMethodResolver.SetFriendField(data, "fConversation", v));
+							ModMenu.SmartInputRow("约会次数", data, "fDate", ref _bufDate, v => GameMethodResolver.SetFriendField(data, "fDate", v));
+							ModMenu.SmartInputRow("送礼次数", data, "fPresent", ref _bufPresent, v => GameMethodResolver.SetFriendField(data, "fPresent", v));
 							ModMenu.Gap(4f);
 							GUILayout.BeginHorizontal();
 							if (ModMenu.RoseBtn("好感MAX", 80))
 							{
-								data.SI("fMeet", 100);
-								data.SI("fFavarite", 100);
+								GameMethodResolver.SetFriendField(data, "fMeet", 100);
+								GameMethodResolver.SetFriendField(data, "fFavarite", 100);
 							}
 							if (ModMenu.RoseBtn("恋爱MAX", 80))
 							{
-								data.SI("fLoveEvents", 5);
+								GameMethodResolver.SetFriendField(data, "fLoveEvents", 5);
 							}
 							GUILayout.EndHorizontal();
 						}
